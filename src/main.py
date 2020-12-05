@@ -14,8 +14,8 @@ class MongoDBPipeline(object):
     https://github.com/realpython/realpython-blog/blob/db5577c3f1fe6b32cfcd21e9a2583063f8b15039/2014/2014-12-31-web-scraping-with-scrapy-and-mongodb.markdown
     """
     def __init__(self, ip: str = '0.0.0.0', port: int = 27017):
-        connection = MongoClient(ip, port)
-        db = connection.scraping
+        self.connection = MongoClient(ip, port)
+        db = self.connection.scraping
         self.collection = db.links
 
     def reset(self):
@@ -45,13 +45,15 @@ class MongoDBPipeline(object):
         for link in self.collection.find().sort('_id'):
             print(link)
 
+    def __del__(self):
+        self.connection.close()
+
 
 class ZoneHRss(object):
     def __init__(self):
         self.data: List[RssField] = list()
 
         tree = ElementTree.parse(urlopen(RSS_URL))
-        # tree = ElementTree.parse("specialfacements.rss")
         root = tree.getroot()
 
         self.data = [RssField(item) for item in root.findall('channel/item')]
@@ -69,6 +71,7 @@ class RssField(dict):
         self["guid"]  = item.find('guid').text
         self["description"] = item.find('guid').text
         self["pubDate"]     = item.find('pubDate').text
+        self["archive"]     = False
 
     def print(self):
         print(self["title"], self["link"], self["guid"], self["description"], self["pubDate"])
@@ -95,3 +98,5 @@ if __name__ == '__main__':
     else:
         rss = ZoneHRss()
         mongo.process_items(rss.data)
+
+    del mongo
